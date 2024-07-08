@@ -13,6 +13,25 @@ const addBookHandler = (request, h) => {
     reading,
   } = request.payload;
 
+  if (!name) {
+    return h
+      .response({
+        status: "fail",
+        message: "Gagal menambahkan buku. Mohon isi nama buku",
+      })
+      .code(400);
+  }
+
+  if (readPage > pageCount) {
+    return h
+      .response({
+        status: "fail",
+        message:
+          "Gagal menambahkan buku. readPage tidak boleh lebih besar dari pageCount",
+      })
+      .code(400);
+  }
+
   const id = nanoid(15);
   const finished = pageCount === readPage;
   const insertedAt = new Date().toISOString();
@@ -33,45 +52,28 @@ const addBookHandler = (request, h) => {
     updatedAt,
   };
 
-  if (!name) {
-    const response = h.response({
-      status: "fail",
-      message: "Gagal menambahkan buku. Mohon isi nama buku",
-    });
-    response.code(400);
-    return response;
-  } else if (readPage > pageCount) {
-    const response = h.response({
-      status: "fail",
-      message:
-        "Gagal menambahkan buku. readPage tidak boleh lebih besar dari pageCount",
-    });
-    response.code(400);
-    return response;
-  } else {
-    books.push(newBook);
+  books.push(newBook);
 
-    const isSuccess = books.filter((book) => book.id === id).length === 1;
+  const isSuccess = books.some((book) => book.id === id);
 
-    if (isSuccess) {
-      const response = h.response({
+  if (isSuccess) {
+    return h
+      .response({
         status: "success",
         message: "Buku berhasil ditambahkan",
         data: {
           bookId: id,
         },
-      });
-      response.code(201);
-      return response;
-    }
+      })
+      .code(201);
+  }
 
-    const response = h.response({
+  return h
+    .response({
       status: "fail",
       message: "Gagal menambahkan buku",
-    });
-    response.code(400);
-    return response;
-  }
+    })
+    .code(400);
 };
 
 const getAllBooksHandler = (request, h) => {
@@ -82,10 +84,14 @@ const getAllBooksHandler = (request, h) => {
   if (name) {
     const nameRegex = new RegExp(name, "i");
     bookFilter = bookFilter.filter((book) => nameRegex.test(book.name));
-  } else if (reading === "0" || reading === "1") {
+  }
+
+  if (reading !== undefined) {
     const isReading = reading === "1";
     bookFilter = bookFilter.filter((book) => book.reading === isReading);
-  } else if (finished === "0" || finished === "1") {
+  }
+
+  if (finished !== undefined) {
     const isFinished = finished === "1";
     bookFilter = bookFilter.filter((book) => book.finished === isFinished);
   }
